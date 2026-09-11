@@ -1,18 +1,304 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Energia Inteligente</title>
-</head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Energia Inteligente - Descubra seu Consumo</title>
+  <style>
+    :root {
+      --primary: #10b981;
+      --primary-dark: #059669;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --accent-red: #ef4444;
+    }
 
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      padding: 20px 15px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .app-container {
+      max-width: 650px;
+      width: 100%;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    header h1 {
+      color: var(--primary-dark);
+      font-size: 1.8rem;
+      margin-bottom: 6px;
+    }
+
+    header p {
+      color: #64748b;
+      font-size: 0.95rem;
+    }
+
+    .grid-appliances {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 15px;
+      text-align: center;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .card.active {
+      border-color: var(--primary);
+      background-color: #f0fdf4;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+    }
+
+    .card .icon {
+      font-size: 2rem;
+      margin-bottom: 8px;
+    }
+
+    .card h3 {
+      font-size: 1rem;
+      margin-bottom: 10px;
+    }
+
+    .controls {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px dashed #cbd5e1;
+    }
+
+    .card.active .controls {
+      display: flex;
+    }
+
+    .control-group {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+    }
+
+    .control-group input {
+      width: 55px;
+      padding: 4px 6px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      text-align: center;
+    }
+
+    .dashboard {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+      border: 1px solid #e2e8f0;
+    }
+
+    .dashboard h2 {
+      font-size: 1.2rem;
+      margin-bottom: 15px;
+      color: #334155;
+    }
+
+    .total-box {
+      display: flex;
+      justify-content: space-between;
+      background: #f1f5f9;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 15px;
+    }
+
+    .total-item { text-align: center; }
+    .total-item label { display: block; font-size: 0.8rem; color: #64748b; }
+    .total-item span { font-size: 1.3rem; font-weight: bold; color: var(--primary-dark); }
+
+    .villain-box {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 10px;
+      padding: 12px 15px;
+      margin-bottom: 15px;
+      display: none;
+    }
+
+    .villain-box h4 {
+      color: var(--accent-red);
+      font-size: 0.9rem;
+      margin-bottom: 4px;
+    }
+
+    .tip-box {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 10px;
+      padding: 12px 15px;
+      font-size: 0.9rem;
+      color: #1e3a8a;
+      display: none;
+    }
+  </style>
+</head>
 <body>
 
+<div class="app-container">
+  <header>
     <h1>⚡ Energia Inteligente</h1>
+    <p>Clique nos aparelhos que você usa em casa para ver seu consumo!</p>
+  </header>
 
-    <p>Descubra quanto seus aparelhos podem consumir.</p>
+  <!-- Lista de Cards -->
+  <div class="grid-appliances" id="appliances-grid"></div>
 
-    <button>Começar</button>
+  <!-- Painel de Resultados -->
+  <div class="dashboard">
+    <h2>📊 Seu Resumo Mensal</h2>
+    
+    <div class="total-box">
+      <div class="total-item">
+        <label>Consumo Estimado</label>
+        <span id="total-kwh">0 kWh</span>
+      </div>
+      <div class="total-item">
+        <label>Gasto Aproximado</label>
+        <span id="total-cost">R$ 0,00</span>
+      </div>
+    </div>
 
+    <div class="villain-box" id="villain-box">
+      <h4>🚨 Quem mais gasta na sua casa:</h4>
+      <p id="villain-name">-</p>
+    </div>
+
+    <div class="tip-box" id="tip-box">
+      💡 <strong>Dica do Agente Ambiental:</strong> Selecione os aparelhos acima para receber recomendações de economia!
+    </div>
+  </div>
+</div>
+
+<script>
+  // Dados dos Aparelhos (Potência em Watts e Dicas)
+  const appliancesData = [
+    { id: 'ac', name: 'Ar-Condicionado', icon: '❄️', power: 1400, defaultQty: 1, defaultHours: 8, tip: 'Mantenha os filtros limpos e ajuste a temperatura para 23°C ou 24°C.' },
+    { id: 'fan', name: 'Ventilador', icon: '🌀', power: 80, defaultQty: 2, defaultHours: 8, tip: 'Desligue o ventilador quando ninguém estiver no cômodo.' },
+    { id: 'fridge', name: 'Geladeira', icon: '🧊', power: 150, defaultQty: 1, defaultHours: 24, tip: 'Verifique as borrachas de vedação e evite guardar alimentos quentes.' },
+    { id: 'shower', name: 'Chuveiro Elétrico', icon: '🚿', power: 4500, defaultQty: 1, defaultHours: 1, tip: 'Reduza o tempo do banho e use a chave no modo Verão nos dias quentes.' },
+    { id: 'tv', name: 'Televisão', icon: '📺', power: 110, defaultQty: 1, defaultHours: 5, tip: 'Evite deixar a TV ligada apenas como som de fundo se não estiver assistindo.' },
+    { id: 'washer', name: 'Máquina de Lavar', icon: '🧺', power: 500, defaultQty: 1, defaultHours: 1, tip: 'Junte o máximo de roupas para usar a capacidade total da máquina de uma vez.' }
+  ];
+
+  const TARIFF = 0.95; // Valor médio estimado por kWh (R$)
+  const selectedState = {};
+
+  function renderCards() {
+    const grid = document.getElementById('appliances-grid');
+    grid.innerHTML = '';
+
+    appliancesData.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.id = `card-${item.id}`;
+      card.onclick = (e) => {
+        // Previne alternar ao clicar diretamente nos inputs
+        if(e.target.tagName === 'INPUT') return;
+        toggleAppliance(item.id);
+      };
+
+      card.innerHTML = `
+        <div class="icon">${item.icon}</div>
+        <h3>${item.name}</h3>
+        <div class="controls">
+          <div class="control-group">
+            <label>Qtd:</label>
+            <input type="number" id="qty-${item.id}" value="${item.defaultQty}" min="1" max="10" onchange="calculate()">
+          </div>
+          <div class="control-group">
+            <label>Horas/dia:</label>
+            <input type="number" id="hours-${item.id}" value="${item.defaultHours}" min="1" max="24" onchange="calculate()">
+          </div>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  function toggleAppliance(id) {
+    selectedState[id] = !selectedState[id];
+    const card = document.getElementById(`card-${id}`);
+    if (selectedState[id]) {
+      card.classList.add('active');
+    } else {
+      card.classList.remove('active');
+    }
+    calculate();
+  }
+
+  function calculate() {
+    let totalKwh = 0;
+    let maxKwh = 0;
+    let villain = null;
+
+    appliancesData.forEach(item => {
+      if (selectedState[item.id]) {
+        const qty = parseInt(document.getElementById(`qty-${item.id}`).value) || 1;
+        const hours = parseFloat(document.getElementById(`hours-${item.id}`).value) || 1;
+        
+        // Consumo em kWh = (Potência x Qtd x Horas x 30 dias) / 1000
+        const kwh = (item.power * qty * hours * 30) / 1000;
+        totalKwh += kwh;
+
+        if (kwh > maxKwh) {
+          maxKwh = kwh;
+          villain = { ...item, calculatedKwh: kwh };
+        }
+      }
+    });
+
+    // Atualiza Totais
+    document.getElementById('total-kwh').innerText = `${totalKwh.toFixed(1)} kWh`;
+    document.getElementById('total-cost').innerText = `R$ ${(totalKwh * TARIFF).toFixed(2)}`;
+
+    // Atualiza Bloco do Vilão e Dica
+    const villainBox = document.getElementById('villain-box');
+    const tipBox = document.getElementById('tip-box');
+
+    if (villain && totalKwh > 0) {
+      villainBox.style.display = 'block';
+      document.getElementById('villain-name').innerText = `${villain.icon} ${villain.name} (${villain.calculatedKwh.toFixed(1)} kWh/mês — R$ ${(villain.calculatedKwh * TARIFF).toFixed(2)})`;
+
+      tipBox.style.display = 'block';
+      tipBox.innerHTML = `💡 <strong>Dica para economizar no(a) ${villain.name}:</strong> ${villain.tip}`;
+    } else {
+      villainBox.style.display = 'none';
+      tipBox.style.display = 'block';
+      tipBox.innerHTML = `💡 <strong>Dica do Agente Ambiental:</strong> Clique em um ou mais aparelhos acima para começar!`;
+    }
+  }
+
+  // Inicializa o aplicativo
+  renderCards();
+</script>
 </body>
 </html>
